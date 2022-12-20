@@ -92,7 +92,7 @@ BNA_memory_ROI.mat
 subj_list.txt
 - contains list of subject numbers included in this project
 
-R_RSMem.csv
+R_MSMem.csv
 - SubjID: subject ID
 - Group: participant group. LTLE = left temporal lobe epilepsy, RTLE = right temporal lobe epilepsy, CON = control
 - pathology: pathology via radiology and/or pathology team
