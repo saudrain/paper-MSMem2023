@@ -1,0 +1,148 @@
+---
+title: "MSMem Matrix Similarity and ROI Similarity Analyses"
+output: html_notebook
+---
+
+V1.0 
+
+Sam Audrain, December 2022
+
+This script takes already calculated matrix similarity values and uses them to predict material-specific memory change in left and right TLE groups. 
+
+It also correlates already computed ROI-similarity values with material-specific memory change in each group. 
+
+
+# Read in the packages
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library(emmeans)
+library(rstatix)
+library(car)
+
+
+```
+
+# Read in the data 
+```{r}
+###### CHANGE PATH FOR YOUR DATA #######
+data<-read.csv("/Users/audrainsp/Library/Mobile Documents/com~apple~CloudDocs/Documents/Science_Projects/RSMemory/MatrixSim_Mem_Nov2020/MSMemNov2020_R/MSMem_Github/R_MSMem.csv")
+
+# subset the data
+po_data<-subset(data, material_specific_mem_change !="NA")
+LTLE_po_data<-subset(data, Group=="LTLE")
+RTLE_po_data<-subset(data, Group=="RTLE")
+
+```
+
+
+# Matrix Similarity Regression 
+```{r, fig.height=5,fig.width=5}
+
+# model 
+model<-lm(material_specific_mem_change ~ MatrixSim_64 * Group, data=po_data, na.action=na.omit)
+
+# test model assumptions 
+plot(model) # residuals vs fitted should be straight, no bad outliers 
+hist(residuals(model)) # residuals should be normal 
+shapiro.test(residuals(model)) # residuals should be normal 
+ncvTest(model) # test for heterogeneity of variance 
+
+# anova table 
+summary(model)
+
+## post hoc test of simple slopes 
+emtrends(model, ~Group, var="MatrixSim_64")
+## trend is the slope. Can see based on confidence intervals RTLE is crossing zero=ns, but LTLE is sig 
+```
+
+# Plots 
+```{r, fig.height=5,fig.width=5}
+
+#### LTLE ######
+LTLE_po_data %>%
+  ggplot(aes(y = VerbalFactor, x = MatrixSim_64)) +
+  geom_smooth(method = lm, size = 2, alpha = 0.2, level = 0.95, colour="black") +
+  geom_point(size = 3.5) +
+  theme_classic() +
+  theme(text = element_text(size = 25), plot.title = element_text(hjust=0.5, face = "bold", size = 22))+
+  scale_y_continuous(limits = c(-3,3), breaks = seq(-3,3,1))+
+  labs(y = "verbal memory change",
+       x = "matrix similarity",
+       title = "")
+
+## RTLE 
+RTLE_po_data %>%
+  ggplot(aes(y = VisualFactor, x = MatrixSim_64)) +
+  geom_smooth(method = lm, size = 2, alpha = 0.2, level = 0.95, colour="black") +
+  geom_point(size = 3.5) +
+  theme_classic() +
+  theme(text = element_text(size = 25), plot.title = element_text(hjust=0.5, face = "bold", size = 22))+
+  scale_y_continuous(limits = c(-3,3), breaks = seq(-3,3,1))+
+  labs(y = "visuospatial memory change",
+       x = "matrix similarity",
+       title = "")
+ 
+```
+
+# ROI-similarity Correlations 
+
+Mass correlations for ROI similarity and p-value correction 
+
+## LTLE
+
+This correlates ROI-similarity with verbal memory change in LTLE, and corrects for multiple comparisons. 
+
+Resulting variable pvals_adjusted_LTLE contains adjusted p values for each BNA_ROI in the network (each row is a p value for 1 ROI, output in the same order as they appear in the R_MsMem.csv spreadsheet)
+```{r}
+
+pvals<-0
+
+## 18:81 indexes columns that contain ROI-similarity values for each BNA_ROI, and each participant (the rows)
+for (i in 18:81) {
+  a <- cor.test(LTLE_po_data$VerbalFactor, LTLE_po_data[,i], method = "pearson", alternative = "two.sided")
+  #print(a$estimate)
+  #print(a$p.value)
+  pvals<-rbind(pvals,a$p.value)
+}
+
+# FDR correct pvalues 
+pvals<-as.matrix(pvals[-1,])
+pvals_adjusted_LTLE<-as.matrix(p.adjust(pvals, method = "fdr", n = length(pvals))) 
+
+```
+
+## RTLE
+
+This correlates ROI-similarity with visual memory change in RTLE, and corrects for multiple comparisons. 
+
+Resulting variable pvals_adjusted_RTLE contains adjusted p values for each BNA_ROI in the network (each row is a p value for 1 ROI, output in the same order as they appear in the R_MsMem.csv spreadsheet)
+
+```{r}
+
+### Rights  ###
+pvals<-0
+## 18:81 indexes columns that contain ROI-similarity values for each BNA_ROI, and each participant (the rows)
+for (i in 18:81) {
+  a <- cor.test(RTLE_po_data$VisualFactor, RTLE_po_data[,i], method = "pearson", alternative = "two.sided")
+  #print(a$estimate)
+  #print(a$p.value)
+  pvals<-rbind(pvals,a$p.value)
+}
+
+# FDR correct pvalues 
+pvals<-pvals[-1,]
+pvals_adjusted_RTLE<-as.matrix(p.adjust(pvals, method = "fdr", n = length(pvals))) 
+
+```
+
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+

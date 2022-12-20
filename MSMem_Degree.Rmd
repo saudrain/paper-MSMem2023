@@ -1,0 +1,317 @@
+---
+title: "MSMem Mean ATL Degree Analysis"
+output: html_notebook
+---
+
+V1.0 
+
+Sam Audrain, December 2022
+
+This script takes already calculated ATL degree and correlates it with material-specific memory change in left and right TLE groups. 
+
+
+# Read in the packages
+
+```{r}
+
+library(Rmisc)
+library(rstatix)
+library(ggplot2)
+library(dplyr)
+library(car)
+library(emmeans)
+
+```
+
+# Read in the data 
+```{r}
+###### CHANGE PATH FOR YOUR DATA #######
+data<-read.csv("/Users/audrainsp/Library/Mobile Documents/com~apple~CloudDocs/Documents/Science_Projects/RSMemory/MatrixSim_Mem_Nov2020/MSMemNov2020_R/MSMem_Github/R_MSMem.csv")
+
+# subsets 
+po_data<-subset(data, Surgery == "LTLAmHipp" | Surgery == "RTLAmHipp" ) # excluding controls and selective surgery patients 
+
+
+```
+
+# Group differences in degree left ATL
+
+Z-score across groups at each threshold, average the z-scored degree across thresholds, and then correlate 
+
+## Prepare the data 
+```{r}
+
+# z-score across the groups at each threshold 
+for (cost in c("05","10","15","20","25","30","35","40","45")){
+  eval(parse(text = paste0("data$L_cost",cost,"_z<-scale(data$L_cost",cost,")")))
+  }
+
+# mean acros thresholds 
+data$mean_L_degree<-rowMeans(data[ , c("L_cost05_z","L_cost10_z","L_cost15_z","L_cost20_z","L_cost25_z","L_cost30_z","L_cost35_z","L_cost40_z","L_cost45_z")])
+
+```
+
+## Models 
+```{r}
+# model 
+model<-lm(mean_L_degree ~ Group, data=data)
+
+## test model assumptions 
+plot(model) # residuals vs fitted should be straight, no bad outliers 
+hist(residuals(model)) # residuals should be normal 
+shapiro.test(residuals(model)) # residuals should be normal
+ncvTest(model) # test for heterogeneity of variance, it's violated here 
+
+# since the model was heteroskedastic, run welch anova instead 
+welch_anova_test(mean_L_degree ~ Group, data=data) 
+
+# post hoc test 
+games_howell_test(mean_L_degree ~ Group, data=data) # using games howell since homogeneity of variance is violated
+```
+
+## Plot 
+```{r, fig.height = 2, fig.width=2}
+# plot 
+ggplot(data, aes(x=Group, y=mean_L_degree, fill=Group)) +
+  geom_boxplot() +
+  geom_point(position=position_jitterdodge(jitter.width=0.5, dodge.width = 0),
+             pch=21, aes(fill=factor(Group)), show.legend = F, size = 1.5) +
+  scale_y_continuous(breaks = seq(-2,3,1),expand = c(0, 0), limits = c(-2,3))+
+  theme_classic() +
+  theme(text = element_text(size = 23), plot.title = element_text(hjust = 0.5), legend.position = "none") +
+  scale_fill_brewer(palette="Blues") +
+  labs(x = "",
+     y = "mean left ATL degree (z)",
+     title = "")
+
+```
+
+# Group differences in degree right ATL
+
+Z-score across groups at each threshold, average the z-scored degree across thresholds, and then correlate 
+
+## Prepare the data
+```{r}
+
+# z-score across the groups at each threshold 
+for (cost in c("05","10","15","20","25","30","35","40","45")){
+  eval(parse(text = paste0("data$R_cost",cost,"_z<-scale(data$R_cost",cost,")")))
+}
+
+# average across thresholds 
+data$mean_R_degree<-rowMeans(data[ , c("R_cost05_z","R_cost10_z","R_cost15_z","R_cost20_z","R_cost25_z","R_cost30_z","R_cost35_z","R_cost40_z","R_cost45_z")])
+
+```
+
+## Models 
+```{r}
+# model 
+model<-lm(mean_R_degree ~ Group, data=data)
+
+# check model assumptions 
+plot(model) # residuals vs fitted should be straight, no bad outliers 
+hist(residuals(model)) # residuals should be normal 
+shapiro.test(residuals(model)) # residuals should be normal
+ncvTest(model) # test for heterogeneity of variance
+
+# anova
+Anova(model, type="III")
+
+# post hocs 
+emmeans(model, list(pairwise ~ Group), adjust = "none")
+
+```
+
+## Plot
+```{r, fig.height = 2, fig.width=2}
+# plot 
+ggplot(data, aes(x=Group, y=mean_R_degree, fill=Group)) +
+  geom_boxplot() +
+  geom_point(position=position_jitterdodge(jitter.width=0.5, dodge.width = 0),
+             pch=21, aes(fill=factor(Group)), show.legend = F, size = 1.5) +
+  scale_y_continuous(breaks = seq(-2,3,1),expand = c(0, 0), limits = c(-2,3))+
+  theme_classic() +
+  theme(text = element_text(size = 23), plot.title = element_text(hjust = 0.5), legend.position = "none") +
+  scale_fill_brewer(palette="Blues") +
+  labs(x = "",
+     y = "mean right ATL degree (z)",
+     title = "")
+
+```
+
+
+# Test relationship between degree and postop memory outcomes 
+
+Excluding selective surgery patients 
+
+## Prepare the data 
+```{r}
+
+# z score across thresholds, for each hemisphere 
+for (cost in c("05","10","15","20","25","30","35","40","45")){
+  for (hem in c("L","R")){
+    eval(parse(text = paste0("po_data$",hem,"_cost",cost,"_z<-scale(po_data$",hem,"_cost",cost,")")))
+  }
+}
+
+# average across thresholds 
+po_data$mean_L_degree<-rowMeans(po_data[ , c("L_cost05_z","L_cost10_z","L_cost15_z","L_cost20_z","L_cost25_z","L_cost30_z","L_cost35_z","L_cost40_z","L_cost45_z")])
+
+po_data$mean_R_degree<-rowMeans(po_data[ , c("R_cost05_z","R_cost10_z","R_cost15_z","R_cost20_z","R_cost25_z","R_cost30_z","R_cost35_z","R_cost40_z","R_cost45_z")])
+
+# create a variable that reflects degree in left ATL for LTLE and right ATL for RTLE
+po_data<-po_data%>%
+  mutate(mean_ATL_degree = case_when(Group == "LTLE" ~ mean_L_degree,
+            Group == "RTLE" ~ mean_R_degree))
+```
+
+## Model
+```{r}
+# model 
+model<-lm(material_specific_mem_change ~ mean_ATL_degree*Group, data=po_data)
+
+# test model assumptions 
+plot(model) # residuals vs fitted should be straight, no bad outliers 
+hist(residuals(model)) # residuals should be normal 
+shapiro.test(residuals(model)) # residuals should be normal
+ncvTest(model) # test for heterogeneity of variance, it's violated here 
+
+# regression 
+summary(model)
+
+## post hoc test of simple slopes 
+emtrends(model, ~Group, var="mean_ATL_degree")
+## trend is the slope. Can see based on confidence intervals RTLE is crossing zero=ns, but LTLE is sig 
+
+```
+
+# Plots
+
+## Degree relationship with material specific memory, averaged across thresholds
+```{r, fig.height = 4, fig.width=4}
+
+# subset the data 
+LTLE_po_data<-subset(po_data, Group=="LTLE")
+RTLE_po_data<-subset(po_data, Group=="RTLE")
+
+
+# plot the summary correlation 
+LTLE_po_data %>%
+  ggplot(aes(x = mean_L_degree, y = VerbalFactor)) +
+  geom_smooth(method = lm, size = 2, alpha = 0.2, level = 0.95, colour="black") +
+  geom_point(size = 3.5) +
+  theme_classic() +
+  theme(text = element_text(size = 23), plot.title = element_text(hjust=0.5, face = "bold", size = 22))+
+  scale_y_continuous(limits = c(-3,3), breaks = seq(-3,3,1))+
+  scale_x_continuous(limits = c(-3,2), breaks = seq(-3,2,1))+
+  labs(x = "mean LTBR degree (z)",
+       y = "verbal memory change",
+       title = "")
+
+# plot the summary correlation 
+RTLE_po_data %>%
+  ggplot(aes(x = mean_R_degree, y = VisualFactor)) +
+  geom_smooth(method = lm, size = 2, alpha = 0.2, level = 0.95, colour="black") +
+  geom_point(size = 3.5) +
+  theme_classic() +
+  theme(text = element_text(size = 23), plot.title = element_text(hjust=0.5, face = "bold", size = 22))+
+  scale_y_continuous(limits = c(-3,3), breaks = seq(-3,3,1))+
+  scale_x_continuous(limits = c(-3,2), breaks = seq(-3,2,1))+
+  labs(x = "mean RTBR degree (z)",
+       y = "vis. memory change",
+       title = "")
+
+```
+
+
+## LTLE correlations between degree and verbal memory change across thresholds 
+```{r, fig.height = 4, fig.width=4}
+
+##correlate degree across different thresholds with memory change. Using one tailed tests given our prior work and hypotheses
+attach(LTLE_po_data)
+L_cost05<-cor.test(VerbalFactor, L_cost05, alternative="less", data=LTLE_po_data)
+L_cost10<-cor.test(VerbalFactor, L_cost10, alternative="less", data=LTLE_po_data)
+L_cost15<-cor.test(VerbalFactor, L_cost15, alternative="less", data=LTLE_po_data)
+L_cost20<-cor.test(VerbalFactor, L_cost20, alternative="less", data=LTLE_po_data)
+L_cost25<-cor.test(VerbalFactor, L_cost25, alternative="less", data=LTLE_po_data)
+L_cost30<-cor.test(VerbalFactor, L_cost30, alternative="less", data=LTLE_po_data)
+L_cost35<-cor.test(VerbalFactor, L_cost35, alternative="less", data=LTLE_po_data)
+L_cost40<-cor.test(VerbalFactor, L_cost40, alternative="less", data=LTLE_po_data)
+L_cost45<-cor.test(VerbalFactor, L_cost45, alternative="less", data=LTLE_po_data)
+
+## create dataframe 
+L_cost_correlation_CI <- data.frame(
+  upper= c(L_cost05$conf.int[2],L_cost10$conf.int[2], L_cost15$conf.int[2], L_cost20$conf.int[2], L_cost25$conf.int[2], L_cost30$conf.int[2], L_cost35$conf.int[2],L_cost40$conf.int[2], L_cost45$conf.int[2]),
+  lower = c(L_cost05$conf.int[1],L_cost10$conf.int[1], L_cost15$conf.int[1], L_cost20$conf.int[1], L_cost25$conf.int[1], L_cost30$conf.int[1], L_cost35$conf.int[1],L_cost40$conf.int[1], L_cost45$conf.int[1] ),
+  correlation =c(L_cost05$estimate[1],L_cost10$estimate[1], L_cost15$estimate[1], L_cost20$estimate[1], L_cost25$estimate[1], L_cost30$estimate[1], L_cost35$estimate[1],L_cost40$estimate[1], L_cost45$estimate[1]),
+  threshold = c(5, 10, 15,20,25,30,35,40,45)
+)
+
+# plot the correlations across thresholds 
+L_cost_correlation_CI %>%
+  ggplot(aes( x = threshold, y= correlation)) +
+  geom_line(color = "black", size = 1)+
+  geom_pointrange(aes(ymin = lower, ymax = upper),color = "black", size = 1)+
+  geom_abline(aes(intercept = 0, slope = 0), linetype = 2) +
+  theme_classic()+
+  theme(text = element_text(size = 22), plot.title = element_text(hjust = 0.5)) +
+  scale_y_continuous(limits = c(-1, 0.5), breaks=seq(-1,0.5,0.2)) +
+  scale_x_continuous(limits = c(5, 45), breaks=seq(5,45,5)) +
+  labs(y = "LATL degree corr. with
+       verbal memory change",
+       x = "threshold",
+       title = "")
+
+detach(LTLE_po_data)
+
+
+```
+
+## RTLE correlations between degree and visual memory change across thresholds 
+```{r, fig.height = 4, fig.width=4}
+
+##correlate degree across different thresholds with memory change. Using one tailed tests given our prior work and hypotheses
+attach(RTLE_po_data)
+R_cost05<-cor.test(VisualFactor, R_cost05, alternative="less", data=RTLE_po_data)
+R_cost10<-cor.test(VisualFactor, R_cost10, alternative="less", data=RTLE_po_data)
+R_cost15<-cor.test(VisualFactor, R_cost15, alternative="less", data=RTLE_po_data)
+R_cost20<-cor.test(VisualFactor, R_cost20, alternative="less", data=RTLE_po_data)
+R_cost25<-cor.test(VisualFactor, R_cost25, alternative="less", data=RTLE_po_data)
+R_cost30<-cor.test(VisualFactor, R_cost30, alternative="less", data=RTLE_po_data)
+R_cost35<-cor.test(VisualFactor, R_cost35, alternative="less", data=RTLE_po_data)
+R_cost40<-cor.test(VisualFactor, R_cost40, alternative="less", data=RTLE_po_data)
+R_cost45<-cor.test(VisualFactor, R_cost45, alternative="less", data=RTLE_po_data)
+
+## create data frame 
+R_cost_correlation_CI <- data.frame(
+  upper= c(R_cost05$conf.int[2],R_cost10$conf.int[2], R_cost15$conf.int[2], R_cost20$conf.int[2], R_cost25$conf.int[2], R_cost30$conf.int[2], R_cost35$conf.int[2],R_cost40$conf.int[2], R_cost45$conf.int[2]),
+  lower = c(R_cost05$conf.int[1],R_cost10$conf.int[1], R_cost15$conf.int[1], R_cost20$conf.int[1], R_cost25$conf.int[1], R_cost30$conf.int[1], R_cost35$conf.int[1],R_cost40$conf.int[1], R_cost45$conf.int[1] ),
+  correlation =c(R_cost05$estimate[1],R_cost10$estimate[1], R_cost15$estimate[1], R_cost20$estimate[1], R_cost25$estimate[1], R_cost30$estimate[1], R_cost35$estimate[1],R_cost40$estimate[1], R_cost45$estimate[1]),
+  threshold = c(5, 10, 15,20,25,30,35,40,45)
+)
+
+## plot the correlation 
+R_cost_correlation_CI %>%
+  ggplot(aes( x = threshold, y= correlation)) +
+  geom_line(color = "black", size = 1)+
+  geom_pointrange(aes(ymin = lower, ymax = upper),color = "black", size = 1)+
+  geom_abline(aes(intercept = 0, slope = 0), linetype = 2) +
+  theme_classic()+
+  theme(text = element_text(size = 23), plot.title = element_text(hjust = 0.5)) +
+  scale_y_continuous(limits = c(-1, 0.5), breaks=seq(-1,0.5,0.2)) +
+  scale_x_continuous(limits = c(5, 45), breaks=seq(5,45,5)) +
+  labs(y = "RATL degree corr. with 
+       vis. memory change",
+       x = "threshold",
+       title = "")
+
+```
+
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+

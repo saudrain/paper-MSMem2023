@@ -1,0 +1,244 @@
+---
+title: "MSMem Demographic Analysis"
+output: html_notebook
+---
+V1.0 
+
+Sam Audrain, December 2022
+
+This script tests for statistical differences in demographic and clinical variables between right TLE, left TLE, and control groups. 
+ 
+# Read in packages
+```{r}
+
+library(dplyr)
+library(car)
+library(rstatix)
+
+```
+
+# Read and subset the data 
+```{r}
+###### CHANGE PATH FOR YOUR DATA #######
+data_demos<-read.csv("/Users/audrainsp/Library/Mobile Documents/com~apple~CloudDocs/Documents/Science_Projects/RSMemory/MatrixSim_Mem_Nov2020/MSMemNov2020_R/MSMem_Github/R_MSMem.csv")
+
+# subset
+demos_TLE<-subset(data_demos, Group == "LTLE" | Group == "RTLE")
+demos_LTLE<-subset(data_demos, Group == "LTLE")
+demos_RTLE<-subset(data_demos, Group == "RTLE")
+
+```
+
+# Age 
+```{r}
+# summary per group 
+data_demos %>%
+  group_by(Group) %>%
+  summarize(mean = mean(age1, na.rm = TRUE), sd = sd(age1, na.rm = TRUE), min = min(age1, na.rm = TRUE), max = max(age1, na.rm = TRUE), n = n())
+
+# model 
+model<-lm(age1~Group, data=data_demos, na.action=na.omit) 
+
+# check model assumptions 
+plot(model) # residuals vs fitted should be straight, no bad outliers 
+hist(residuals(model)) # residuals should be normal 
+shapiro.test(residuals(model)) # residuals should be normal 
+ncvTest(model) # test for heterogeneity of variance 
+
+# normality assumption violated 
+data_demos %>%
+  group_by(Group) %>%
+  shapiro_test(age1)
+
+# nonparametric test 
+kruskal.test(age1~Group, data=data_demos, na.action=na.omit)
+
+```
+
+# Sex
+```{r}
+# create table with sex x group informaion 
+sex<-as.table(rbind(c(11,8), c(14,23), c(13,22))) #con M, con F, LTLE M, LTLE F, RTLE M, RTLE R
+
+# chi square test 
+chisq.test(sex) 
+#the proportion is not sig different between the two groups 
+#phi<-sqrt(chisq/n)
+
+```
+
+# Education 
+## omnibus 
+```{r}
+# summary
+data_demos %>%
+  group_by(Group) %>%
+  summarize(mean = mean(edu, na.rm = TRUE), sd = sd(edu, na.rm = TRUE), min = min(edu, na.rm = TRUE), max = max(edu, na.rm = TRUE), n = n())
+
+# model 
+model<-lm(edu~Group, data=data_demos, na.action=na.omit)
+
+# test model assumptions 
+plot(model) # residuals vs fitted should be straight, no bad outliers 
+hist(residuals(model)) # residuals should be normal 
+shapiro.test(residuals(model)) # residuals should be normal 
+ncvTest(model) # test for heterogeneity of variance 
+
+# anova table 
+Anova(model, type="II")
+```
+
+## posthocs 
+### LTLE vs RTLE 
+```{r}
+
+## t test assumptions 
+## normality 
+demos_TLE %>%
+  group_by(Group) %>%
+  shapiro_test(edu)
+## variance
+demos_TLE %>% levene_test(edu ~ Group)
+
+#normality violated so use wilcoxon rank sum test
+wilcox.test(edu~Group, data=demos_TLE, conf.int=TRUE)
+
+```
+
+### LTLE vs CON
+```{r}
+## subset the data 
+demos_LTLE_CON<-subset(data_demos, Group == "LTLE" | Group == "CON")
+
+## t test assumptions 
+## normality 
+demos_LTLE_CON %>%
+  group_by(Group) %>%
+  shapiro_test(edu)
+## variance
+demos_LTLE_CON %>% levene_test(edu ~ Group)
+
+# normality violated, use nonparametric 
+wilcox.test(edu~Group, data=demos_LTLE_CON, conf.int=TRUE)
+
+```
+
+### RTLE vs CON
+```{r}
+
+# subset 
+demos_RTLE_CON<-subset(data_demos, Group == "RTLE" | Group == "CON")
+
+## t test assumptions 
+## normality 
+demos_RTLE_CON %>%
+  group_by(Group) %>%
+  shapiro_test(edu)
+## variance
+demos_RTLE_CON %>% levene_test(edu ~ Group)
+
+# t test 
+t.test(edu~Group, data = demos_RTLE_CON, alternative = "two.sided", paired = FALSE, var.equal=TRUE)
+
+```
+
+
+
+# Age of onset
+```{r}
+
+# summary
+demos_TLE %>%
+  group_by(Group) %>%
+  summarize(mean = mean(AOO, na.rm = TRUE), sd = sd(AOO, na.rm = TRUE), min = min(AOO, na.rm = TRUE), max = max(AOO, na.rm = TRUE), n = n())
+
+## t test assumptions 
+## normality 
+demos_TLE %>%
+  group_by(Group) %>%
+  shapiro_test(AOO)
+## variance
+demos_TLE %>% levene_test(AOO ~ Group)
+
+# nomrality violated, use nonparametric 
+wilcox.test(AOO~Group, data=demos_TLE, conf.int=TRUE)
+
+```
+
+# Hemispheric Dominance 
+```{r}
+## create table of counts per group 
+hemdom<-as.table(rbind(c(31,6), c(30,3))) # LTLE left hem, LTLE B, RTLE left hem, RTLE B. 2 RTLE hemdom is NA
+
+#chisq.test(hemdom) ## marginal, note this may not be best test becuase low cell numbers 
+fisher.test(hemdom) #use fisher test becuase a cell count is <5, can see there is a sig diff in cell counts 
+## if CI includes number 1, not sig for odds ratio 
+
+```
+
+# Surgery Type
+```{r}
+# create table of counts per group 
+surg<-as.table(rbind(c(34,3), c(30,5))) ## ATL LTLE, selective LTLE, ATL RTLE, selective RTLE
+#chisq.test(surg)
+fisher.test(surg) #use fisher test becuase a cell count is <5, can see no diff in surg type 
+## if CI includes number 1, not sig for odds ratio 
+
+```
+# Presence of MTS
+```{r}
+# create table of counts per group 
+MTS<-as.table(rbind(c(27,10), c(23,12))) ## MTS LTLE, no MTS LTLE, MTS RTLE, no MTS RTLE
+chisq.test(MTS)
+
+```
+
+# Matrix Similarity Distribution 
+```{r}
+
+## t test assumptions 
+## normality 
+demos_TLE %>%
+  group_by(Group) %>%
+  shapiro_test(MatrixSim_64)
+## variance
+demos_TLE %>% levene_test(MatrixSim_64 ~ Group)
+
+# t test 
+t.test(MatrixSim_64~Group, data = demos_TLE, alternative = "two.sided", paired = FALSE) 
+
+```
+
+Distribution of material specific memory 
+```{r}
+
+## t test assumptions 
+## normality 
+demos_LTLE %>%
+  shapiro_test(Pre_Verb)
+demos_RTLE %>%
+  shapiro_test(Pre_Vis)
+
+## comparing material specific preop memory 
+t.test(demos_LTLE$Pre_Verb, demos_RTLE$Pre_Vis, alternative = "two.sided", paired = FALSE) #ns
+
+
+## t test assumptions 
+## normality 
+demos_LTLE %>%
+  shapiro_test(VerbalFactor)
+demos_RTLE %>%
+  shapiro_test(VisualFactor)
+
+## comparing material specific memory decline between LTLE and RTLE 
+t.test(demos_LTLE$VerbalFactor, demos_RTLE$VisualFactor, alternative = "two.sided", paired = FALSE) #ns
+
+```
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+

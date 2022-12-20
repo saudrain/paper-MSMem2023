@@ -1,0 +1,160 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+## Some statistical choices
+# VIF
+vif explanation: https://www.rdocumentation.org/packages/car/versions/3.0-10/topics/vif
+
+should be less than 10 to assess for colinearity in models
+
+if there is colinearity, like between IQ aned edu, can include 1 in model. check with VIF. variance inflation factor. if more than X its bad
+
+
+# Checking model assumptions
+ For linear regression:
+ - residuals are normally distributed: QQ plot for normality, points should follow the line, and shapiro.test() if not sig means there's no danger here 
+ - relationship between x and y are linear: residuals vs fitted plot should be straight horizontal line 
+ - homogeneity of variance of residuals: ncvTest(model) from car package formally tests this 
+ - predictors are uncorrelated: VIF calculation 
+ - residuals are independent of each other 
+ - no bad outliers: residuals vs leverage plot to check for outliers, any points outside the dotted red line which indicates cooks distance should be investigated
+ 
+# Read in the packages
+```{r}
+
+library(car)
+library(jtools)
+
+```
+
+# Read in the data
+```{r}
+###### CHANGE PATH FOR YOUR DATA #######
+data<-read.csv("/Users/audrainsp/Library/Mobile Documents/com~apple~CloudDocs/Documents/Science_Projects/RSMemory/MatrixSim_Mem_Nov2020/MSMemNov2020_R/MSMem_Github/R_MSMem.csv")
+
+# subset 
+po_data<-subset(data, Surgery == "LTLAmHipp" | Surgery == "RTLAmHipp" ) # excluding controls and selective surgery patients 
+
+
+```
+
+
+# Prepare the data 
+
+To statistically test, we will z-score across groups at each threshold, average the z-scored degree across thresholds, and then correlate once
+
+```{r}
+
+# z score across thresholds, for each hemisphere 
+for (cost in c("05","10","15","20","25","30","35","40","45")){
+  for (hem in c("L","R")){
+    eval(parse(text = paste0("po_data$",hem,"_cost",cost,"_z<-scale(po_data$",hem,"_cost",cost,")")))
+  }
+}
+
+# average across thresholds 
+po_data$mean_L_degree<-rowMeans(po_data[ , c("L_cost05_z","L_cost10_z","L_cost15_z","L_cost20_z","L_cost25_z","L_cost30_z","L_cost35_z","L_cost40_z","L_cost45_z")])
+
+po_data$mean_R_degree<-rowMeans(po_data[ , c("R_cost05_z","R_cost10_z","R_cost15_z","R_cost20_z","R_cost25_z","R_cost30_z","R_cost35_z","R_cost40_z","R_cost45_z")])
+
+## center MS
+po_data$MatrixSim_64_scaled<-scale(po_data$MatrixSim_64, center=TRUE, scale=FALSE)
+
+```
+
+# LTLE
+
+## Models
+
+### Verbal memory change predicted by matrix similarity + degree
+```{r}
+
+# model 
+model<-lm(VerbalFactor ~ MatrixSim_64_scaled + mean_L_degree, data=po_data, na.action=na.omit, subset=Group=="LTLE")
+
+# check model assumptions 
+plot(model) # residuals vs fitted should be straight, no bad outliers
+hist(residuals(model)) # residuals should be normal
+shapiro.test(residuals(model)) # residuals should be normal
+ncvTest(model) # test for heterogeneity of variance
+vif(model) ## variance inflation should be less than 10 
+
+# stats 
+summary(model) ##when using just full ATL cases, both degree and MS predicts outcome 
+
+# variance explained 
+summ(model, part.corr=TRUE) ### part.r is semipartial corr, partial.r is partial corr. 
+#semi-partial correlation = does A influence B above and beyond C influence on B? 
+#partial correlation = what is the correlation between A and B after accounting for fact that C influences both? 
+## to get unique variance, we want semi-partial corrs. to get shared variance, subtract sub of semi-partial from total model r2 
+# remember these are rs, need to square to get % variance explained 
+```
+
+### Verbal memory change predicted by matrix similarity + degree + clinical and demographic variables 
+```{r}
+## model 
+model2<-lm(VerbalFactor ~ MatrixSim_64_scaled + mean_L_degree + Pre_Verb + MTS_status +age1 +sex +edu +AOO, data=po_data, na.action=na.omit, subset=Group=="LTLE")
+
+# check model assumptions 
+plot(model2) # residuals vs fitted should be straight, no bad outliers
+hist(residuals(model2)) # residuals should be normal
+shapiro.test(residuals(model2)) # residuals should be normal
+ncvTest(model2) # test for heterogeneity of variance
+vif(model2) ## variance inflation should be less than 10 
+
+# stats 
+summary(model2) ##when using just full ATL cases, both degree and MS predicts outcome 
+
+# variance explained 
+summ(model2, part.corr=TRUE) ### part.r is semipartial corr, partial.r is partial corr. 
+#semi-partial correlation = does A influence B above and beyond C influence on B? 
+#partial correlation = what is the correlation between A and B after accounting for fact that C influences both? 
+## to get unique variance, we want semi-partial corrs. to get shared variance, subtract sub of semi-partial from total model r2 
+# remember these are rs, need to square to get % variance explained 
+```
+
+# Compare models with and without clinical and demographic variables 
+```{r}
+
+anova(model,model2)
+
+```
+
+# RTLE
+
+## Models
+
+### Visual memory change predicted by clinical and demographic variables
+
+We already know matrix similarity and degree are not associated with visual memory change, so we don't include them here. 
+
+```{r}
+# model 
+model<-lm(VisualFactor ~ Pre_Vis +MTS_status +age1 +sex +edu +AOO, data=po_data, na.action=na.omit, subset=Group=="RTLE") 
+
+# check model assumptions 
+plot(model2) # residuals vs fitted should be straight, no bad outliers
+hist(residuals(model2)) # residuals should be normal
+shapiro.test(residuals(model2)) # residuals should be normal
+ncvTest(model2) # test for heterogeneity of variance
+vif(model2) ## variance inflation should be less than 10 
+
+# stats 
+summary(model)
+
+
+
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
