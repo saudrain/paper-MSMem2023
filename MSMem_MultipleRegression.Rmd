@@ -1,29 +1,13 @@
 ---
-title: "R Notebook"
+title: "MSMem Multiple Regression Model Comparisons"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+Analyzes variance explained by Matrix Similarity and Mean ATL Degree predictors and compares to clinical and demographic variables. 
 
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+V1.0 
 
-## Some statistical choices
-# VIF
-vif explanation: https://www.rdocumentation.org/packages/car/versions/3.0-10/topics/vif
-
-should be less than 10 to assess for colinearity in models
-
-if there is colinearity, like between IQ aned edu, can include 1 in model. check with VIF. variance inflation factor. if more than X its bad
-
-
-# Checking model assumptions
- For linear regression:
- - residuals are normally distributed: QQ plot for normality, points should follow the line, and shapiro.test() if not sig means there's no danger here 
- - relationship between x and y are linear: residuals vs fitted plot should be straight horizontal line 
- - homogeneity of variance of residuals: ncvTest(model) from car package formally tests this 
- - predictors are uncorrelated: VIF calculation 
- - residuals are independent of each other 
- - no bad outliers: residuals vs leverage plot to check for outliers, any points outside the dotted red line which indicates cooks distance should be investigated
+Sam Audrain, December 2022
  
 # Read in the packages
 ```{r}
@@ -151,10 +135,4 @@ summary(model)
 
 
 ```
-
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
-
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
-
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
 
