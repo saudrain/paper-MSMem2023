@@ -1,20 +1,21 @@
 # The paper
 This repository includes scripts and data for the following paper:
 
-Audrain, Barnett, & McAndrews, 2023, Leveraging the resting brain to predict memory decline after temporal lobectomy
+Audrain, Barnett, & McAndrews, Epilepsia 2023, Leveraging the resting brain to predict memory decline after temporal lobectomy
 
 # Abstract
 Objectives
-Anterior temporal lobectomy as a treatment for temporal lobe epilepsy is associated with a variable degree of postoperative memory decline, and estimating this decline for individual patients is a critical step of preoperative planning. Presently, predicting memory morbidity relies on indices of preoperative temporal lobe structural and functional integrity. However, epilepsy is increasingly understood as a network disorder, and memory a network phenomenon. We aimed to assess the utility of functional network measures to predict postoperative memory changes.
+Predicting memory morbidity after temporal lobectomy in patients with temporal lobe epilepsy (TLE) relies on indices of preoperative temporal lobe structural and functional integrity. However, epilepsy is increasingly considered a network disorder, and memory a network phenomenon. We assessed the utility of functional network measures to predict postoperative memory changes. 
 
 Methods
-Seventy-two adults with left and right temporal lobe epilepsy (TLE) underwent preoperative resting-state fMRI (rs-fMRI) and pre- and postoperative neuropsychological assessment. We compared functional connectivity throughout the memory network of each patient to a healthy control template based on 19 individuals to identify differences in global organization. A second metric indicated the degree of integration of the to-be-resected temporal lobe with the rest of the memory network. We included these measures in a model alongside standard clinical and demographic variables as predictors of memory change after surgery.
+Seventy-two adults with TLE (37 left/35 right) underwent preoperative resting-state fMRI and pre- and postoperative neuropsychological assessment. We compared functional connectivity throughout the memory network of each patient to a healthy control template (n=19) to identify differences in global organization. A second metric indicated the degree of integration of the to-be-resected temporal lobe with the rest of the memory network. We included these measures in a linear regression model alongside standard clinical variables as predictors of memory change after surgery.
 
 Results
-Left TLE patients with more abnormal memory networks, and with greater functional integration of the to-be-resected region with the rest of the memory network preoperatively, experienced the greatest decline in verbal memory after surgery. Together, these two measures explained 44% of variability in verbal memory change, outperforming standard clinical and demographic variables. None of the variables examined in this study were associated with visuospatial memory change in patients with right TLE.
+Left TLE patients with more atypical memory networks, and with greater functional integration of the to-be-resected region with the rest of the memory network preoperatively, experienced the greatest decline in verbal memory after surgery. Together, these two measures explained 44% of variance in verbal memory change, outperforming standard clinical and demographic variables. None of the variables examined were associated with visuospatial memory change in patients with right TLE. 
 
-Conclusion
-Resting-state connectivity provides valuable information concerning both the integrity of to-be-resected tissue as well as functional reserve across memory-relevant regions outside of the to-be-resected tissue. Intrinsic functional connectivity has the potential to be useful for clinical decision-making regarding memory outcomes in left TLE, and more work is needed to identify differences seen in right TLE.
+Significance 
+Resting-state connectivity provides valuable information concerning both the integrity of to-be-resected tissue and functional reserve across memory-relevant regions outside of the to-be-resected tissue. Intrinsic functional connectivity has the potential to be useful for clinical decision-making regarding memory outcomes in left TLE, and more work is needed to identify the factors responsible for differences seen in right TLE. 
+
 
 # The software
 Matrix Similarity and ATL Degree were calculated using in house scripts in Matlab version R2021a, and using the Matlab-based Brain Connectivity Toolbox version 2017_01_15
@@ -31,6 +32,7 @@ Statistical analyses and figures were coded and plotted in R version 3.6.3, and 
   5. emmeans: https://cran.r-project.org/web/packages/emmeans/index.html
   6. Rmisc: https://cran.r-project.org/web/packages/Rmisc/index.html
   7. jtools: https://cran.r-project.org/web/packages/jtools/index.html
+  
 
 These software packages must be installed on your local machine in order to run these scripts. Installation can take several minutes per software package.
 
@@ -113,6 +115,9 @@ R_MSMem.csv
 - BNA_3...BNA_136	B: ROI similarity values for each of the 64 ROIs in the memory network. Each column is named after the Brainnetome Atlas ROI label corresponding to the ROI. (output of MatrixSimilarity_Calculator.m script)
 - L_cost05...L_cost45: 	ATL degree for to-be-resected ROIs of the left hemisphere, at thresholds 5-45 (output of ATLDegree_Calculator.m script)
 - R_cost05...R_cost45: ATL degree for to-be-resected ROIs of the right hemisphere, at thresholds 5-45 (output of ATLDegree_Calculator.m script)
+- surg_NP2_delay: delay in days between surgery and postoperative neuropsychological assessment.
+- LH_vol_norm: left hippocampal volume (normalized by intracranial volume)
+- RH_vol_norm: right hippocampal volume (normalized by intracranial volume)
 
 This file accompanies all R scripts (.Rmd) for statistical analysis and figure generation.
 
