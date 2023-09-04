@@ -2,9 +2,9 @@
 title: "MSMem Demographic Analysis"
 output: html_notebook
 ---
-V1.0 
+V2.0 edits based on peer review 
 
-Sam Audrain, December 2022
+Sam Audrain, September 2023
 
 This script tests for statistical differences in demographic and clinical variables between right TLE, left TLE, and control groups. 
  
@@ -20,7 +20,7 @@ library(rstatix)
 # Read and subset the data 
 ```{r}
 ###### CHANGE PATH FOR YOUR DATA #######
-data_demos<-read.csv("/Users/audrainsp/Library/Mobile Documents/com~apple~CloudDocs/Documents/Science_Projects/RSMemory/MatrixSim_Mem_Nov2020/MSMemNov2020_R/MSMem_Github/R_MSMem.csv")
+data_demos<-read.csv("/Users/samanthaaudrain/Documents/Science_Projects/RSMemory/MatrixSim_Mem_Nov2020/MSMemNov2020_R/MSMem_Github/R_MSMem.csv")
 
 # subset
 demos_TLE<-subset(data_demos, Group == "LTLE" | Group == "RTLE")
@@ -142,8 +142,6 @@ t.test(edu~Group, data = demos_RTLE_CON, alternative = "two.sided", paired = FAL
 
 ```
 
-
-
 # Age of onset
 ```{r}
 
@@ -185,6 +183,7 @@ fisher.test(surg) #use fisher test becuase a cell count is <5, can see no diff i
 ## if CI includes number 1, not sig for odds ratio 
 
 ```
+
 # Presence of MTS
 ```{r}
 # create table of counts per group 
@@ -192,6 +191,7 @@ MTS<-as.table(rbind(c(27,10), c(23,12))) ## MTS LTLE, no MTS LTLE, MTS RTLE, no 
 chisq.test(MTS)
 
 ```
+
 
 # Matrix Similarity Distribution 
 ```{r}
@@ -209,7 +209,7 @@ t.test(MatrixSim_64~Group, data = demos_TLE, alternative = "two.sided", paired =
 
 ```
 
-Distribution of material specific memory 
+# Distribution of material specific memory 
 ```{r}
 
 ## t test assumptions 
@@ -233,7 +233,36 @@ demos_RTLE %>%
 ## comparing material specific memory decline between LTLE and RTLE 
 t.test(demos_LTLE$VerbalFactor, demos_RTLE$VisualFactor, alternative = "two.sided", paired = FALSE) #ns
 
+
+
 ```
+
+# Hippocampal volume 
+```{r}
+# test left vs right hippocampal volume in LTLE
+po_data_LTLE<-subset(data_demos, Group=="LTLE")
+t.test(po_data_LTLE$LH_vol_norm, po_data_LTLE$RH_vol_norm, paired=TRUE)
+
+# test left vs right hippocampal volume in RTLE
+po_data_RTLE<-subset(data_demos, Group=="RTLE")
+t.test(po_data_RTLE$LH_vol_norm, po_data_RTLE$RH_vol_norm, paired=TRUE)
+
+## visualize 
+po_data_long <- gather(data_demos, HC_hem, volume, c("LH_vol_norm", "RH_vol_norm"), factor_key=TRUE)
+po_data_long
+data_vols<-data.frame(po_data_long$SubjID, po_data_long$Group, po_data_long$HC_hem, po_data_long$volume)
+colnames(data_vols)<-c("SubjID","Group","HC_hem","volume")
+
+data_vols %>%
+  ggplot(aes(y = volume, x = Group, fill = HC_hem)) +
+  geom_violin(position = position_nudge(x = 0, y = 0), aes(alpha=.5)) +
+  geom_jitter(width = 0.05, size=2, aes(color=HC_hem)) +
+  theme_classic() +
+  scale_fill_manual(values = c("#f7b5ca","#cdf7fa")) 
+
+
+```
+
 
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
