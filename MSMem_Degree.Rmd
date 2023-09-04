@@ -3,9 +3,9 @@ title: "MSMem Mean ATL Degree Analysis"
 output: html_notebook
 ---
 
-V1.0 
+V2.0 edits based on peer review 
 
-Sam Audrain, December 2022
+Sam Audrain, September 2023
 
 This script takes already calculated ATL degree and correlates it with material-specific memory change in left and right TLE groups. 
 
@@ -26,11 +26,10 @@ library(emmeans)
 # Read in the data 
 ```{r}
 ###### CHANGE PATH FOR YOUR DATA #######
-data<-read.csv("/Users/audrainsp/Library/Mobile Documents/com~apple~CloudDocs/Documents/Science_Projects/RSMemory/MatrixSim_Mem_Nov2020/MSMemNov2020_R/MSMem_Github/R_MSMem.csv")
+data<-read.csv("/Users/samanthaaudrain/Documents/Science_Projects/RSMemory/MatrixSim_Mem_Nov2020/MSMemNov2020_R/MSMem_Github/R_MSMem.csv")
 
 # subsets 
 po_data<-subset(data, Surgery == "LTLAmHipp" | Surgery == "RTLAmHipp" ) # excluding controls and selective surgery patients 
-
 
 ```
 
@@ -86,6 +85,8 @@ ggplot(data, aes(x=Group, y=mean_L_degree, fill=Group)) +
 
 ```
 
+
+
 # Group differences in degree right ATL
 
 Z-score across groups at each threshold, average the z-scored degree across thresholds, and then correlate 
@@ -118,7 +119,9 @@ ncvTest(model) # test for heterogeneity of variance
 Anova(model, type="III")
 
 # post hocs 
-emmeans(model, list(pairwise ~ Group), adjust = "none")
+pairwise<-emmeans(model, list(pairwise ~ Group), adjust = "none")
+pairwise
+confint(pairwise, level=0.95, oldNames=FALSE)
 
 ```
 
@@ -174,10 +177,12 @@ model<-lm(material_specific_mem_change ~ mean_ATL_degree*Group, data=po_data)
 plot(model) # residuals vs fitted should be straight, no bad outliers 
 hist(residuals(model)) # residuals should be normal 
 shapiro.test(residuals(model)) # residuals should be normal
-ncvTest(model) # test for heterogeneity of variance, it's violated here 
+ncvTest(model) # test for heterogeneity of variance 
+vif(model) # collinearity check, should be less than 5 
 
 # regression 
 summary(model)
+confint(model)
 
 ## post hoc test of simple slopes 
 emtrends(model, ~Group, var="mean_ATL_degree")
@@ -221,10 +226,46 @@ RTLE_po_data %>%
        y = "vis. memory change",
        title = "")
 
+
+
+
+```
+## again with hemisphere dominance coloured in 
+To check that language dominance isn't driving our correlations. 
+```{r, fig.height = 5, fig.width=6}
+
+RTLE_po_data %>%
+  ggplot(aes(x = mean_R_degree, y = VisualFactor, color = hem_dom)) +
+  geom_smooth(method = lm, size = 2, alpha = 0.2, level = 0.95, colour="black") +
+  geom_point(size = 3.5) +
+  theme_classic() +
+  theme(text = element_text(size = 23), plot.title = element_text(hjust=0.5, face = "bold", size = 22))+
+  scale_y_continuous(limits = c(-3,3), breaks = seq(-3,3,1))+
+  scale_x_continuous(limits = c(-3,2), breaks = seq(-3,2,1))+
+  scale_color_manual(values=c("#3ebbfa","#fc5e03")) +
+  labs(x = "mean RTBR degree (z)",
+       y = "vis. memory change",
+       title = "")
+
+LTLE_po_data %>%
+  ggplot(aes(x = mean_L_degree, y = VerbalFactor, color = hem_dom)) +
+  geom_smooth(method = lm, size = 2, alpha = 0.2, level = 0.95, colour="black") +
+  geom_point(size = 3.5) +
+  theme_classic() +
+  theme(text = element_text(size = 23), plot.title = element_text(hjust=0.5, face = "bold", size = 22))+
+  scale_y_continuous(limits = c(-3,3), breaks = seq(-3,3,1))+
+  scale_x_continuous(limits = c(-3,2), breaks = seq(-3,2,1))+
+  scale_color_manual(values=c("#3ebbfa","#fc5e03")) +
+  labs(x = "mean LTBR degree (z)",
+       y = "verbal memory change",
+       title = "")
+
 ```
 
 
+
 ## LTLE correlations between degree and verbal memory change across thresholds 
+Check that no one threshold is driving the average correlation. 
 ```{r, fig.height = 4, fig.width=4}
 
 ##correlate degree across different thresholds with memory change. Using one tailed tests given our prior work and hypotheses
